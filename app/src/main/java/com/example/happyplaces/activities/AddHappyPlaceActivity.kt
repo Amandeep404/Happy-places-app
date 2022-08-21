@@ -1,7 +1,6 @@
-package com.example.happyplaces
+package com.example.happyplaces.activities
 
 import android.Manifest
-import android.Manifest.permission.CAMERA
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.ActivityNotFoundException
@@ -9,29 +8,38 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Camera
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
-import android.view.View
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import com.example.happyplaces.R
+import com.example.happyplaces.database.DatabaseHandler
+import com.example.happyplaces.models.HappyPlaceModel
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import kotlinx.android.synthetic.main.activity_add_happpy_place.*
+import org.w3c.dom.Text
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
+import java.text.DateFormat
 import java.util.*
 
 class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
+
+    private var saveImageToInternalStorage : Uri? = null
+    private var mLatitude : Double = 0.0
+    private var mLongitude : Double = 0.0
+    private var defaultDate : String? = null
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_happpy_place)
@@ -41,6 +49,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE
         )
+        etDateAddHappyPlaces.setText( DateFormat.getDateInstance().format(Date()) )
 
         setSupportActionBar(toolbarAddHappyPlace)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -60,6 +69,11 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
 
         }
 
+        saveBtnAddHappyPlaces.setOnClickListener{
+            saveDataOnClickSaveBtn()
+        }
+
+
     }
 
     private fun popUpDatePicker(){
@@ -70,8 +84,8 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
         val day = c.get(Calendar.DAY_OF_MONTH)
 
         val datePicker = DatePickerDialog(this,{view, year, monthOfYear, dayOfMonth ->
-            val date= (dayOfMonth.toString() + "."  +  (monthOfYear+1) + "."+ year)
-            etDateAddHappyPlaces.setText(date)
+            defaultDate= (dayOfMonth.toString() + "."  +  (monthOfYear+1) + "."+ year)
+            etDateAddHappyPlaces.setText(defaultDate)
         },
             year,
             month,
@@ -126,14 +140,9 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
                     1 -> takePictureFromCamera()
 
                 }
-
-
             }
-
             show()
         }
-
-
     }
 
     private fun choosePhotoFromGallery(){
@@ -154,7 +163,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
                     try {
                         val selectedImageBitmap =MediaStore.Images.Media.getBitmap(this.contentResolver, contentUri)
                         ibAddHappyPlaces.background = null
-                        saveImageToInternalStorage(selectedImageBitmap)
+                        saveImageToInternalStorage = saveImageToInternalStorage(selectedImageBitmap)
                         ibAddHappyPlaces.setImageBitmap(selectedImageBitmap)
 
                     }catch (e:IOException){
@@ -166,7 +175,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
                 if (requestCode == camera){
                     val thumbNail : Bitmap = data!!.extras!!.get("data") as Bitmap
                     ibAddHappyPlaces.background = null
-                    saveImageToInternalStorage(thumbNail)
+                    saveImageToInternalStorage = saveImageToInternalStorage(thumbNail)
                     ibAddHappyPlaces.setImageBitmap(thumbNail)
                 }
                 }
@@ -190,7 +199,32 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
 
         return Uri.parse(file.absolutePath)
     }
+    private fun saveDataOnClickSaveBtn(){
+        if (etTitleAddHappyPlaces.text.isNullOrBlank()
+            || etDescriptionAddHappyPlaces.text.isNullOrBlank()
+            || etLocationAddHappyPlaces.text.isNullOrBlank()
+            || saveImageToInternalStorage==null){
+            Toast.makeText(this, "Make sure you fill all details", Toast.LENGTH_SHORT).show()
+        }else{
+            val happyPlaceModel = HappyPlaceModel(
+                0,
+                etTitleAddHappyPlaces.toString(),
+                saveImageToInternalStorage.toString(),
+                etDescriptionAddHappyPlaces.toString(),
+                etDateAddHappyPlaces.toString(),
+                etLocationAddHappyPlaces.toString(),
+                mLatitude,
+                mLongitude
+            )
+            val dbHandler = DatabaseHandler(this)
+            val addHappyPlace = dbHandler.addHappyPlaces(happyPlaceModel)
 
+            if(addHappyPlace > 0){
+                Toast.makeText(this, "Happy Place is inserted successfully", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
+    }
 
 
     companion object{
