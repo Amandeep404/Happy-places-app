@@ -31,9 +31,9 @@ class HappyPlacesAdapter(private val context : Context,
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val model = list[position]
 
-            holder.circleImage.setImageURI(Uri.parse(model.image))
-            holder.textviewTitle.text = model.title
-            holder.textviewDescription.text = model.description
+        holder.circleImage.setImageURI(Uri.parse(model.image))
+        holder.textviewTitle.text = model.title
+        holder.textviewDescription.text = model.description
 
     }
 
