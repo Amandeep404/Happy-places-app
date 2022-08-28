@@ -17,7 +17,6 @@ class DatabaseHandler(context: Context):
         private const val DATABASE_NAME = "HappyPlacesDatabase"
         private const val TABLE_HAPPY_PLACE = "HappyPlacesTable"
 
-
         private const val COLUMN_ID = "_id"
         private const val COLUMN_TITLE = "title"
         private const val COLUMN_IMAGE = "image"
@@ -37,8 +36,8 @@ class DatabaseHandler(context: Context):
                 + COLUMN_DATE + " TEXT,"
                 + COLUMN_LOCATION + " TEXT,"
                 + COLUMN_LATITUDE + " TEXT,"
-                + COLUMN_LONGITUDE + " TEXT)"
-                )
+                + COLUMN_LONGITUDE + " TEXT" + ")")
+
 
         db?.execSQL(CREATE_HAPPY_PLACE_TABLE)
     }
@@ -61,13 +60,30 @@ class DatabaseHandler(context: Context):
         values.put(COLUMN_LONGITUDE, happyPlace.longitude)
 
         val result = db.insert(TABLE_HAPPY_PLACE, null, values)
-
         db.close()
 
         return result
     }
+// insert returns long but update returns int
+    fun updateHappyPlaces(happyPlace:HappyPlaceModel): Int{
+        val db = this.writableDatabase
 
+        val values = ContentValues()
+        //values.put(COLUMN_ID,happyPlace.id)
+        values.put(COLUMN_TITLE, happyPlace.title)
+        values.put(COLUMN_IMAGE,  happyPlace.image)
+        values.put(COLUMN_DESCRIPTION, happyPlace.description)
+        values.put(COLUMN_DATE, happyPlace.date)
+        values.put(COLUMN_LOCATION, happyPlace.location)
+        values.put(COLUMN_LATITUDE, happyPlace.latitude)
+        values.put(COLUMN_LONGITUDE, happyPlace.longitude)
 
+        val success = db.update(TABLE_HAPPY_PLACE, values, COLUMN_ID + "=" + happyPlace.id, null)
+
+        db.close()
+
+        return success
+    }
 
     @SuppressLint("Range")
     fun getHappyPlacesList():ArrayList<HappyPlaceModel>{

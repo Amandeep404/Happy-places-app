@@ -18,12 +18,14 @@ import androidx.appcompat.app.AlertDialog
 import com.example.happyplaces.R
 import com.example.happyplaces.database.DatabaseHandler
 import com.example.happyplaces.models.HappyPlaceModel
+import com.google.android.libraries.places.api.Places
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import kotlinx.android.synthetic.main.activity_add_happpy_place.*
+import kotlinx.android.synthetic.main.activity_happpy_place_details.*
 import org.w3c.dom.Text
 import java.io.File
 import java.io.FileOutputStream
@@ -39,6 +41,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
     private var mLongitude : Double = 0.0
     private var defaultDate : String? = null
 
+    private var mHappyPLaceDetails : HappyPlaceModel? =null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +56,12 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
 
         setSupportActionBar(toolbarAddHappyPlace)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
+
+        if (intent.hasExtra(MainActivity.EXTRA_PLACE_DETAILS)){
+            mHappyPLaceDetails = intent.getSerializableExtra(MainActivity.EXTRA_PLACE_DETAILS) as HappyPlaceModel
+        }
+
         toolbarAddHappyPlace.setNavigationOnClickListener{
             onBackPressed()
         }
@@ -73,6 +82,26 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
             saveDataOnClickSaveBtn()
         }
 
+        if (mHappyPLaceDetails!=null){
+            supportActionBar?.title = "Edit Happy Place"
+
+            etTitleAddHappyPlaces.setText(mHappyPLaceDetails!!.title)
+            etDescriptionAddHappyPlaces.setText(mHappyPLaceDetails!!.description)
+            etDateAddHappyPlaces.setText(mHappyPLaceDetails!!.date)
+            etLocationAddHappyPlaces.setText(mHappyPLaceDetails!!.location)
+            mLatitude = mHappyPLaceDetails!!.latitude
+            mLongitude = mHappyPLaceDetails!!.longitude
+
+            saveImageToInternalStorage = Uri.parse(mHappyPLaceDetails!!.image)
+
+            ibAddHappyPlaces.setImageURI(saveImageToInternalStorage)
+            ibAddHappyPlaces.background = null
+            saveBtnAddHappyPlaces.text = "UPDATE"
+        }
+
+        if (!Places.isInitialized()){
+            Places.initialize(this, resources.getString(R.string.google_maps_api_key))
+        }
 
     }
 
@@ -82,6 +111,7 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
         val year = c.get(Calendar.YEAR)
         val month = c.get(Calendar.MONTH)
         val day = c.get(Calendar.DAY_OF_MONTH)
+
 
         val datePicker = DatePickerDialog(this,{view, year, monthOfYear, dayOfMonth ->
             defaultDate= (dayOfMonth.toString() + "."  +  (monthOfYear+1) + "."+ year)
@@ -200,29 +230,45 @@ class AddHappyPlaceActivity : AppCompatActivity(), MultiplePermissionsListener {
         return Uri.parse(file.absolutePath)
     }
     private fun saveDataOnClickSaveBtn(){
-        if (etTitleAddHappyPlaces.text.isNullOrBlank()
-            || etDescriptionAddHappyPlaces.text.isNullOrBlank()
-            || etLocationAddHappyPlaces.text.isNullOrBlank()
+
+        val title =etTitleAddHappyPlaces.text.toString()
+        val description = etDescriptionAddHappyPlaces.text.toString()
+        val location = etLocationAddHappyPlaces.text.toString()
+        val date =  etDateAddHappyPlaces.text.toString()
+
+        if (title.isEmpty()
+            || description.isEmpty()
+            || location.isEmpty()
             || saveImageToInternalStorage==null){
             Toast.makeText(this, "Make sure you fill all details", Toast.LENGTH_SHORT).show()
         }else{
             val happyPlaceModel = HappyPlaceModel(
-                0,
-                etTitleAddHappyPlaces.toString(),
+                if (mHappyPLaceDetails == null) 0 else mHappyPLaceDetails!!.id,
+                title,
                 saveImageToInternalStorage.toString(),
-                etDescriptionAddHappyPlaces.toString(),
-                etDateAddHappyPlaces.toString(),
-                etLocationAddHappyPlaces.toString(),
+                description,
+                date,
+                location,
                 mLatitude,
                 mLongitude
             )
             val dbHandler = DatabaseHandler(this)
-            val addHappyPlace = dbHandler.addHappyPlaces(happyPlaceModel)
+            if (mHappyPLaceDetails == null){
+                val addHappyPlace = dbHandler.addHappyPlaces(happyPlaceModel)
 
-            if(addHappyPlace > 0){
-                setResult(Activity.RESULT_OK)
-                finish()
+                if(addHappyPlace > 0){
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                }
+            }else{
+                val updateHappyPlace = dbHandler.updateHappyPlaces(happyPlaceModel)
+                if(updateHappyPlace > 0){
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                }
             }
+
+
         }
     }
 
